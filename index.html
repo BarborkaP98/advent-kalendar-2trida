@@ -1,0 +1,169 @@
+
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Adventní kalendář – 2. třída</title>
+<style>
+  :root{ --size:120px; --gap:12px; }
+  body{ font-family: Arial, Helvetica, sans-serif; padding:20px; background:#fff; color:#111; }
+  h1{ text-align:center; }
+  .grid{ display:grid; grid-template-columns: repeat(5, 1fr); gap:var(--gap); max-width:900px; margin:20px auto; }
+  .cell{ background:#f7f7f7; border:1px solid #ddd; border-radius:8px; min-height:var(--size); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer; }
+  .cell.locked{ background:#e9eef6; color:#555; }
+  .cell img{ max-width:100%; max-height:100%; display:block; }
+  .num{ position:absolute; top:6px; right:8px; font-weight:bold; color:#333; }
+  .intro{ grid-column: span 5; padding:12px; text-align:center; }
+  /* modal */
+  .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999; }
+  .modal .box{ background:#fff; padding:12px; border-radius:8px; max-width:95%; max-height:90%; overflow:auto; }
+  .modal img{ max-width:100%; height:auto; display:block; }
+  .close{ position:absolute; top:8px; right:12px; background:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  @media (max-width:600px){ :root{ --size:90px; } .grid{ gap:8px; } }
+</style>
+</head>
+<body>
+<h1>Adventní kalendář – 2. třída</h1>
+<p style="text-align:center;margin-top:0;">Úvodní strana je otevřená vždy. Okénka se odemykají o půlnoci daného dne (1.–24.12.; 25.12. se zobrazí řešení). Jakmile je den odemčený, zůstává odemčený.</p>
+
+<div class="grid" id="grid"></div>
+
+<!-- modal -->
+<div class="modal" id="modal" role="dialog" aria-hidden="true">
+  <div class="box" id="modalBox">
+    <div class="close" id="modalClose" title="Zavřít">✕</div>
+    <img id="modalImg" alt="Úloha" />
+  </div>
+</div>
+
+<script>
+// list of images
+const images = {
+  intro: "img/intro.png",
+    "01": "img/01.png",
+  "02": "img/02.png",
+  "03": "img/03.png",
+  "04": "img/04.png",
+  "05": "img/05.png",
+  "06": "img/06.png",
+  "07": "img/07.png",
+  "08": "img/08.png",
+  "09": "img/09.png",
+  "10": "img/10.png",
+  "11": "img/11.png",
+  "12": "img/12.png",
+  "13": "img/13.png",
+  "14": "img/14.png",
+  "15": "img/15.png",
+  "16": "img/16.png",
+  "17": "img/17.png",
+  "18": "img/18.png",
+  "19": "img/19.png",
+  "20": "img/20.png",
+  "21": "img/21.png",
+  "22": "img/22.png",
+  "23": "img/23.png",
+  "24": "img/24.png",
+  "25": "img/25.png"
+};
+
+function getTodayNumber() {
+  const now = new Date();
+  // Use UTC midnight to avoid timezone issues: check local date at midnight
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const year = todayLocal.getFullYear();
+  const dec1 = new Date(year, 11, 1); // months 0-11
+  const dec25 = new Date(year, 11, 25);
+  if (todayLocal < dec1) return 0;
+  if (todayLocal >= dec25) return 25;
+  const diff = Math.floor((todayLocal - dec1) / (1000*60*60*24)) + 1;
+  return Math.min(Math.max(diff, 0), 24);
+}
+
+function buildGrid() {
+  const grid = document.getElementById("grid");
+  // intro cell
+  const intro = document.createElement("div");
+  intro.className = "cell intro";
+  const imgIntro = document.createElement("img");
+  imgIntro.src = images.intro;
+  imgIntro.alt = "Úvod";
+  intro.appendChild(imgIntro);
+  grid.appendChild(intro);
+
+  const unlocked = getTodayNumber();
+  // add 1..24 cells
+  for (let i=1;i<=24;i++) {
+    const cell = document.createElement("div");
+    const num = String(i).padStart(2,"0");
+    cell.className = "cell";
+    const badge = document.createElement("div");
+    badge.className = "num";
+    badge.textContent = i;
+    cell.appendChild(badge);
+
+    if (i <= unlocked) {
+      // unlocked
+      const img = document.createElement("img");
+      img.src = images[num];
+      img.alt = "Úloha " + i;
+      cell.appendChild(img);
+      cell.addEventListener("click", ()=> openModal(img.src));
+    } else {
+      cell.classList.add("locked");
+      cell.addEventListener("click", ()=> {
+        alert("Toto okénko se odemkne " + (new Date(new Date().getFullYear(),11,i)).toLocaleDateString('cs-CZ'));
+      });
+    }
+    grid.appendChild(cell);
+  }
+
+  // solution (25)
+  const solCell = document.createElement("div");
+  solCell.className = "cell";
+  const solBadge = document.createElement("div");
+  solBadge.className = "num";
+  solBadge.textContent = 25;
+  solCell.appendChild(solBadge);
+  if (unlocked >= 25) {
+    const img = document.createElement("img");
+    img.src = images["25"];
+    img.alt = "Řešení";
+    solCell.appendChild(img);
+    solCell.addEventListener("click", ()=> openModal(img.src));
+  } else {
+    solCell.classList.add("locked");
+    solCell.addEventListener("click", ()=> {
+      alert("Řešení se odemkne 25. prosince.");
+    });
+  }
+  grid.appendChild(solCell);
+}
+
+function openModal(src){
+  const modal = document.getElementById("modal");
+  const modalImg = document.getElementById("modalImg");
+  modalImg.src = src;
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden","false");
+}
+
+function closeModal(){
+  const modal = document.getElementById("modal");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden","true");
+  document.getElementById("modalImg").src = "";
+}
+
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modal").addEventListener("click", function(e){
+  if(e.target===this) closeModal();
+});
+
+(function(){
+  buildGrid();
+})();
+</script>
+</body>
+</html>
